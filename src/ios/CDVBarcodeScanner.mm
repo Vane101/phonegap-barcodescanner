@@ -10,9 +10,9 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 
 //------------------------------------------------------------------------------
-// use the all-in-one version of zxing that we built
+// Import the ZXing definitions
 //------------------------------------------------------------------------------
-#import "zxing-all-in-one.h"
+#import "ZXingObjC.h"
 #import <Cordova/CDVPlugin.h>
 
 
@@ -80,10 +80,10 @@
 - (void)openDialog;
 - (NSString*)setUpCaptureSession;
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection;
-- (NSString*)formatStringFrom:(zxing::BarcodeFormat)format;
+- (NSString*)formatStringFrom:(ZXBarcodeFormat)format;
 - (UIImage*)getImageFromSample:(CMSampleBufferRef)sampleBuffer;
-- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr;
-- (UIImage*) getImageFromLuminanceSource:(zxing::LuminanceSource*)luminanceSource;
+- (ZXLuminanceSource*) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr;
+- (UIImage*) getImageFromLuminanceSource:(ZXLuminanceSource*)luminanceSource;
 - (void)dumpImage:(UIImage*)image;
 @end
 
@@ -488,10 +488,26 @@ parentViewController:(UIViewController*)parentViewController
     AVCaptureDeviceInput* input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
     if (!input) return @"unable to obtain video capture device input";
 
-    AVCaptureMetadataOutput* output = [[[AVCaptureMetadataOutput alloc] init] autorelease];
+    /*AVCaptureMetadataOutput* output = [[[AVCaptureMetadataOutput alloc] init] autorelease];
     if (!output) return @"unable to obtain video capture output";
 
     [output setMetadataObjectsDelegate:self queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0)];
+    */
+
+    // XXX
+    AVCaptureVideoDataOutput* output = [[[AVCaptureVideoDataOutput alloc] init] autorelease];
+    if (!output) return @"unable to obtain video capture output";
+
+    NSDictionary* videoOutputSettings = [NSDictionary
+                                         dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA]
+                                         forKey:(id)kCVPixelBufferPixelFormatTypeKey
+                                        ];
+
+    output.alwaysDiscardsLateVideoFrames = YES;
+    output.videoSettings = videoOutputSettings;
+
+    [output setSampleBufferDelegate:self queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0)];
+
 
     if ([captureSession canSetSessionPreset:AVCaptureSessionPresetHigh]) {
       captureSession.sessionPreset = AVCaptureSessionPresetHigh;
@@ -515,7 +531,7 @@ parentViewController:(UIViewController*)parentViewController
         return @"unable to add video capture output to session";
     }
 
-    [output setMetadataObjectTypes:@[AVMetadataObjectTypeQRCode,
+    /*[output setMetadataObjectTypes:@[AVMetadataObjectTypeQRCode,
                                      AVMetadataObjectTypeAztecCode,
                                      AVMetadataObjectTypeDataMatrixCode,
                                      AVMetadataObjectTypeUPCECode,
@@ -526,6 +542,7 @@ parentViewController:(UIViewController*)parentViewController
                                      AVMetadataObjectTypeCode39Code,
                                      AVMetadataObjectTypeITF14Code,
                                      AVMetadataObjectTypePDF417Code]];
+    */
 
     // setup capture preview layer
     self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:captureSession];
@@ -540,7 +557,9 @@ parentViewController:(UIViewController*)parentViewController
 //--------------------------------------------------------------------------
 // this method gets sent the captured frames
 //--------------------------------------------------------------------------
-- (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection*)connection {
+- (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection {
+
+//- (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection*)connection {
 
     if (!self.capturing) return;
 
@@ -565,20 +584,52 @@ parentViewController:(UIViewController*)parentViewController
     //         [self dumpImage: [[self getImageFromSample:sampleBuffer] autorelease]];
 #endif
 
-
     try {
         // This will bring in multiple entities if there are multiple 2D codes in frame.
-        for (AVMetadataObject *metaData in metadataObjects) {
+        /*for (AVMetadataObject *metaData in metadataObjects) {
             AVMetadataMachineReadableCodeObject* code = (AVMetadataMachineReadableCodeObject*)[self.previewLayer transformedMetadataObjectForMetadataObject:(AVMetadataMachineReadableCodeObject*)metaData];
 
             if ([self checkResult:code.stringValue]) {
                 [self barcodeScanSucceeded:code.stringValue format:[self formatStringFromMetadata:code]];
             }
+        }*/
+        CVImageBufferRef videoFrame = CMSampleBufferGetImageBuffer(sampleBuffer);
+        CGImageRef videoFrameImage = [ZXCGImageLuminanceSource createImageFromBuffer:videoFrame];
+
+        ZXLuminanceSource *source = [[[ZXCGImageLuminanceSource alloc] initWithCGImage:videoFrameImage] autorelease];
+        ZXBinaryBitmap *bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
+
+        CGImageRelease(videoFrameImage);
+
+        NSError *error = nil;
+
+        // There are a number of hints we can give to the reader, including
+        // possible formats, allowed lengths, and the string encoding.
+        ZXDecodeHints *hints = [ZXDecodeHints hints];
+
+        ZXMultiFormatReader *reader = [ZXMultiFormatReader reader];
+        ZXResult *result = [reader decode:bitmap
+                                    hints:hints
+                                    error:&error];
+        if (result) {
+          // The coded result as a string. The raw data can be accessed with
+          // result.rawBytes and result.length.
+          NSString *contents = result.text;
+
+          // The barcode format, such as a QR code or UPC-A
+          ZXBarcodeFormat format = result.barcodeFormat;
+
+          if ([self checkResult:contents]) {
+              [self barcodeScanSucceeded:contents format:[self barcodeFormatToString:code]];
+          }
+        } else {
+          // Use error to determine why we didn't get a result, such as a barcode
+          // not being found, an invalid checksum, or a format inconsistency.
         }
     }
     catch (...) {
-        //            NSLog(@"decoding: unknown exception");
-        //            [self barcodeScanFailed:@"unknown exception decoding barcode"];
+                    NSLog(@"decoding: unknown exception");
+                    [self barcodeScanFailed:@"unknown exception decoding barcode"];
     }
 
     //        NSTimeInterval timeElapsed  = [NSDate timeIntervalSinceReferenceDate] - timeStart;
@@ -589,16 +640,16 @@ parentViewController:(UIViewController*)parentViewController
 //--------------------------------------------------------------------------
 // convert barcode format to string
 //--------------------------------------------------------------------------
-- (NSString*)formatStringFrom:(zxing::BarcodeFormat)format {
-    if (format == zxing::BarcodeFormat_QR_CODE)      return @"QR_CODE";
-    if (format == zxing::BarcodeFormat_DATA_MATRIX)  return @"DATA_MATRIX";
-    if (format == zxing::BarcodeFormat_UPC_E)        return @"UPC_E";
-    if (format == zxing::BarcodeFormat_UPC_A)        return @"UPC_A";
-    if (format == zxing::BarcodeFormat_EAN_8)        return @"EAN_8";
-    if (format == zxing::BarcodeFormat_EAN_13)       return @"EAN_13";
-    if (format == zxing::BarcodeFormat_CODE_128)     return @"CODE_128";
-    if (format == zxing::BarcodeFormat_CODE_39)      return @"CODE_39";
-    if (format == zxing::BarcodeFormat_ITF)          return @"ITF";
+- (NSString*)formatStringFrom:(ZXBarcodeFormat)format {
+    /*if (format == ZXBarcodeFormat_QR_CODE)      return @"QR_CODE";
+    if (format == ZXBarcodeFormat_DATA_MATRIX)  return @"DATA_MATRIX";
+    if (format == ZXBarcodeFormat_UPC_E)        return @"UPC_E";
+    if (format == ZXBarcodeFormat_UPC_A)        return @"UPC_A";
+    if (format == ZXBarcodeFormat_EAN_8)        return @"EAN_8";
+    if (format == ZXBarcodeFormat_EAN_13)       return @"EAN_13";
+    if (format == ZXBarcodeFormat_CODE_128)     return @"CODE_128";
+    if (format == ZXBarcodeFormat_CODE_39)      return @"CODE_39";
+    if (format == ZXBarcodeFormat_ITF)          return @"ITF";*/
     return @"???";
 }
 
@@ -622,11 +673,66 @@ parentViewController:(UIViewController*)parentViewController
     return @"???";
 }
 
+- (NSString *)barcodeFormatToString:(ZXBarcodeFormat)format {
+  switch (format) {
+    case kBarcodeFormatAztec:
+      return @"AZTEC";
+
+    case kBarcodeFormatCodabar:
+      return @"CODABAR";
+
+    case kBarcodeFormatCode39:
+      return @"CODE_39";
+
+    case kBarcodeFormatCode93:
+      return @"CODE_93";
+
+    case kBarcodeFormatCode128:
+      return @"CODE_128";
+
+    case kBarcodeFormatDataMatrix:
+      return @"DATA_MATRIX";
+
+    case kBarcodeFormatEan8:
+      return @"EAN_8";
+
+    case kBarcodeFormatEan13:
+      return @"EAN_13";
+
+    case kBarcodeFormatITF:
+      return @"ITF";
+
+    case kBarcodeFormatPDF417:
+      return @"PDF_417";
+
+    case kBarcodeFormatQRCode:
+      return @"QR_CODE";
+
+    case kBarcodeFormatRSS14:
+      return @"RSS_14";
+
+    case kBarcodeFormatRSSExpanded:
+      return @"RSS_EXPANDED";
+
+    case kBarcodeFormatUPCA:
+      return @"UPC_A";
+
+    case kBarcodeFormatUPCE:
+      return @"UPC_E";
+
+    case kBarcodeFormatUPCEANExtension:
+      return @"UPC_EAN_EXTENSION";
+
+    default:
+      return @"???";
+  }
+}
+
 //--------------------------------------------------------------------------
 // convert capture's sample buffer (scanned picture) into the thing that
 // zxing needs.
 //--------------------------------------------------------------------------
-- (zxing::Ref<zxing::LuminanceSource>) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr {
+- (ZXLuminanceSource *) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr {
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferLockBaseAddress(imageBuffer, 0);
 
@@ -644,7 +750,7 @@ parentViewController:(UIViewController*)parentViewController
 
     if (!greyData) {
         CVPixelBufferUnlockBaseAddress(imageBuffer,0);
-        throw new zxing::ReaderException("out of memory");
+        throw new ZXReaderException("out of memory");
     }
 
     size_t offsetX = (width  - greyWidth) / 2;
@@ -673,11 +779,11 @@ parentViewController:(UIViewController*)parentViewController
 
     CVPixelBufferUnlockBaseAddress(imageBuffer,0);
 
-    using namespace zxing;
+    ZXLuminanceSource* luminanceSource = [[ZXCGImageLuminanceSource alloc] initWithBuffer:imageBuffer left:0 top:0 width:(int)greyWidth height:(int)greyWidth]
 
-    Ref<LuminanceSource> luminanceSource (
-                                          new GreyscaleLuminanceSource(greyData, (int)greyWidth, (int)greyWidth, 0, 0, (int)greyWidth, (int)greyWidth)
-                                          );
+//    ZXLuminanceSource* luminanceSource (
+//                                          new GreyscaleLuminanceSource(greyData, (int)greyWidth, (int)greyWidth, 0, 0, (int)greyWidth, (int)greyWidth)
+//                                          );
 
     return luminanceSource;
 }
@@ -685,7 +791,7 @@ parentViewController:(UIViewController*)parentViewController
 //--------------------------------------------------------------------------
 // for debugging
 //--------------------------------------------------------------------------
-- (UIImage*) getImageFromLuminanceSource:(zxing::LuminanceSource*)luminanceSource  {
+- (UIImage*) getImageFromLuminanceSource:(ZXLuminanceSource*)luminanceSource  {
     unsigned char* bytes = luminanceSource->getMatrix();
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
     CGContextRef context = CGBitmapContextCreate(
