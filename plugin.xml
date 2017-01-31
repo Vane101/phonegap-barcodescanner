@@ -35,7 +35,7 @@
     <framework src="CoreImage.framework"/>
     <framework src="AudioToolbox.framework"/>
 
-    <framework src="ZXingObjC" type="podspec" spec="~> 3.2.0" />
+    <framework src="ZXingObjC" type="podspec" spec="~> 3.2.1" />
   </platform>
   <platform name="android">
     <source-file src="src/android/com/phonegap/plugins/barcodescanner/BarcodeScanner.java" target-dir="src/com/phonegap/plugins/barcodescanner"/>
