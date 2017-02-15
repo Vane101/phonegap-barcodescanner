@@ -25,7 +25,7 @@
     <resource-file src="src/ios/CDVBarcodeScanner.bundle"/>
 
     <!-- ZXingObjC file listing -->
-    
+
     <header-file src="src/ios/ZXingObjC/aztec/decoder/ZXAztecDecoder.h" target-dir="ZXingObjC/aztec/decoder" />
     <header-file src="src/ios/ZXingObjC/aztec/detector/ZXAztecDetector.h" target-dir="ZXingObjC/aztec/detector" />
     <header-file src="src/ios/ZXingObjC/aztec/encoder/ZXAztecBinaryShiftToken.h" target-dir="ZXingObjC/aztec/encoder" />
@@ -207,6 +207,7 @@
     <header-file src="src/ios/ZXingObjC/oned/ZXUPCEANReader.h" target-dir="ZXingObjC/oned" />
     <header-file src="src/ios/ZXingObjC/oned/ZXUPCEANWriter.h" target-dir="ZXingObjC/oned" />
     <header-file src="src/ios/ZXingObjC/oned/ZXUPCEReader.h" target-dir="ZXingObjC/oned" />
+    <header-file src="src/ios/ZXingObjC/oned/ZXUPCEWriter.h" target-dir="ZXingObjC/oned" />
     <header-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXModulusGF.h" target-dir="ZXingObjC/pdf417/decoder/ec" />
     <header-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXModulusPoly.h" target-dir="ZXingObjC/pdf417/decoder/ec" />
     <header-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXPDF417ECErrorCorrection.h" target-dir="ZXingObjC/pdf417/decoder/ec" />
@@ -431,6 +432,7 @@
     <source-file src="src/ios/ZXingObjC/oned/ZXUPCEANReader.m" target-dir="ZXingObjC/oned" />
     <source-file src="src/ios/ZXingObjC/oned/ZXUPCEANWriter.m" target-dir="ZXingObjC/oned" />
     <source-file src="src/ios/ZXingObjC/oned/ZXUPCEReader.m" target-dir="ZXingObjC/oned" />
+    <source-file src="src/ios/ZXingObjC/oned/ZXUPCEWriter.m" target-dir="ZXingObjC/oned" />
     <source-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXModulusGF.m" target-dir="ZXingObjC/pdf417/decoder/ec" />
     <source-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXModulusPoly.m" target-dir="ZXingObjC/pdf417/decoder/ec" />
     <source-file src="src/ios/ZXingObjC/pdf417/decoder/ec/ZXPDF417ECErrorCorrection.m" target-dir="ZXingObjC/pdf417/decoder/ec" />
