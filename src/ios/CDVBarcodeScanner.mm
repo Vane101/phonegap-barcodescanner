@@ -12,7 +12,7 @@
 //------------------------------------------------------------------------------
 // Import the ZXing definitions
 //------------------------------------------------------------------------------
-#import <ZXingObjC/ZXingObjC.h>
+#import "ZXingObjC/ZXingObjC.h"
 #import <Cordova/CDVPlugin.h>
 
 
