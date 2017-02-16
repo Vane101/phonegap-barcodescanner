@@ -52,7 +52,7 @@
 //------------------------------------------------------------------------------
 // class that does the grunt work
 //------------------------------------------------------------------------------
-@interface CDVbcsProcessor : NSObject <AVCaptureMetadataOutputObjectsDelegate> {}
+@interface CDVbcsProcessor : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate> {}
 @property (nonatomic, retain) CDVBarcodeScanner*           plugin;
 @property (nonatomic, retain) NSString*                   callback;
 @property (nonatomic, retain) UIViewController*           parentViewController;
@@ -620,7 +620,7 @@ parentViewController:(UIViewController*)parentViewController
           ZXBarcodeFormat format = result.barcodeFormat;
 
           if ([self checkResult:contents]) {
-              [self barcodeScanSucceeded:contents format:[self barcodeFormatToString:code]];
+              [self barcodeScanSucceeded:contents format:[self barcodeFormatToString:format]];
           }
         } else {
           // Use error to determine why we didn't get a result, such as a barcode
@@ -733,7 +733,7 @@ parentViewController:(UIViewController*)parentViewController
 // zxing needs.
 //--------------------------------------------------------------------------
 - (ZXLuminanceSource *) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr {
-    CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+    /*CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferLockBaseAddress(imageBuffer, 0);
 
     size_t   bytesPerRow =            CVPixelBufferGetBytesPerRow(imageBuffer);
@@ -785,14 +785,15 @@ parentViewController:(UIViewController*)parentViewController
 //                                          new GreyscaleLuminanceSource(greyData, (int)greyWidth, (int)greyWidth, 0, 0, (int)greyWidth, (int)greyWidth)
 //                                          );
 
-    return luminanceSource;
+    return luminanceSource;*/
+    return 0;
 }
 
 //--------------------------------------------------------------------------
 // for debugging
 //--------------------------------------------------------------------------
 - (UIImage*) getImageFromLuminanceSource:(ZXLuminanceSource*)luminanceSource  {
-    unsigned char* bytes = luminanceSource->getMatrix();
+    /*unsigned char* bytes = luminanceSource->getMatrix();
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
     CGContextRef context = CGBitmapContextCreate(
                                                  bytes,
@@ -809,7 +810,8 @@ parentViewController:(UIViewController*)parentViewController
     CGImageRelease(cgImage);
     free(bytes);
 
-    return image;
+    return image;*/
+    return 0;
 }
 
 //--------------------------------------------------------------------------
