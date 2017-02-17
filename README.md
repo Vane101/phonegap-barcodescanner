@@ -91,6 +91,10 @@ Not by default, but supported if you pass in the "formats" option:
 * CODE_128
 * CODE_39
 * ITF
+* CODABAR
+* RSS14 
+* AZTEC ('beta' quality)
+* PDF417 ('alpha' quality)
 
 ### Windows
 
