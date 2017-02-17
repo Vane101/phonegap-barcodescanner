@@ -81,10 +81,8 @@
 - (void)openDialog;
 - (NSString*)setUpCaptureSession;
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection;
-- (NSString*)formatStringFrom:(ZXBarcodeFormat)format;
+- (NSString*)barcodeFormatToString:(ZXBarcodeFormat)format;
 - (UIImage*)getImageFromSample:(CMSampleBufferRef)sampleBuffer;
-- (ZXLuminanceSource*) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr;
-- (UIImage*) getImageFromLuminanceSource:(ZXLuminanceSource*)luminanceSource;
 - (void)dumpImage:(UIImage*)image;
 @end
 
@@ -494,13 +492,6 @@ parentViewController:(UIViewController*)parentViewController
     AVCaptureDeviceInput* input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
     if (!input) return @"unable to obtain video capture device input";
 
-    /*AVCaptureMetadataOutput* output = [[[AVCaptureMetadataOutput alloc] init] autorelease];
-    if (!output) return @"unable to obtain video capture output";
-
-    [output setMetadataObjectsDelegate:self queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0)];
-    */
-
-    // XXX
     AVCaptureVideoDataOutput* output = [[[AVCaptureVideoDataOutput alloc] init] autorelease];
     if (!output) return @"unable to obtain video capture output";
 
@@ -537,19 +528,6 @@ parentViewController:(UIViewController*)parentViewController
         return @"unable to add video capture output to session";
     }
 
-    /*[output setMetadataObjectTypes:@[AVMetadataObjectTypeQRCode,
-                                     AVMetadataObjectTypeAztecCode,
-                                     AVMetadataObjectTypeDataMatrixCode,
-                                     AVMetadataObjectTypeUPCECode,
-                                     AVMetadataObjectTypeEAN8Code,
-                                     AVMetadataObjectTypeEAN13Code,
-                                     AVMetadataObjectTypeCode128Code,
-                                     AVMetadataObjectTypeCode93Code,
-                                     AVMetadataObjectTypeCode39Code,
-                                     AVMetadataObjectTypeITF14Code,
-                                     AVMetadataObjectTypePDF417Code]];
-    */
-
     // setup capture preview layer
     self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:captureSession];
     self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -564,8 +542,6 @@ parentViewController:(UIViewController*)parentViewController
 // this method gets sent the captured frames
 //--------------------------------------------------------------------------
 - (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection {
-
-//- (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection*)connection {
 
     if (!self.capturing) return;
 
@@ -591,14 +567,6 @@ parentViewController:(UIViewController*)parentViewController
 #endif
 
     try {
-        // This will bring in multiple entities if there are multiple 2D codes in frame.
-        /*for (AVMetadataObject *metaData in metadataObjects) {
-            AVMetadataMachineReadableCodeObject* code = (AVMetadataMachineReadableCodeObject*)[self.previewLayer transformedMetadataObjectForMetadataObject:(AVMetadataMachineReadableCodeObject*)metaData];
-
-            if ([self checkResult:code.stringValue]) {
-                [self barcodeScanSucceeded:code.stringValue format:[self formatStringFromMetadata:code]];
-            }
-        }*/
         CVImageBufferRef videoFrame = CMSampleBufferGetImageBuffer(sampleBuffer);
         CGImageRef videoFrameImage = [ZXCGImageLuminanceSource createImageFromBuffer:videoFrame];
 
@@ -643,41 +611,6 @@ parentViewController:(UIViewController*)parentViewController
 
 }
 
-//--------------------------------------------------------------------------
-// convert barcode format to string
-//--------------------------------------------------------------------------
-- (NSString*)formatStringFrom:(ZXBarcodeFormat)format {
-    /*if (format == ZXBarcodeFormat_QR_CODE)      return @"QR_CODE";
-    if (format == ZXBarcodeFormat_DATA_MATRIX)  return @"DATA_MATRIX";
-    if (format == ZXBarcodeFormat_UPC_E)        return @"UPC_E";
-    if (format == ZXBarcodeFormat_UPC_A)        return @"UPC_A";
-    if (format == ZXBarcodeFormat_EAN_8)        return @"EAN_8";
-    if (format == ZXBarcodeFormat_EAN_13)       return @"EAN_13";
-    if (format == ZXBarcodeFormat_CODE_128)     return @"CODE_128";
-    if (format == ZXBarcodeFormat_CODE_39)      return @"CODE_39";
-    if (format == ZXBarcodeFormat_ITF)          return @"ITF";*/
-    return @"???";
-}
-
-//--------------------------------------------------------------------------
-// convert metadata object information to barcode format string
-//--------------------------------------------------------------------------
-- (NSString*)formatStringFromMetadata:(AVMetadataMachineReadableCodeObject*)format {
-    if (format.type == AVMetadataObjectTypeQRCode)          return @"QR_CODE";
-    if (format.type == AVMetadataObjectTypeAztecCode)       return @"AZTEC";
-    if (format.type == AVMetadataObjectTypeDataMatrixCode)  return @"DATA_MATRIX";
-    if (format.type == AVMetadataObjectTypeUPCECode)        return @"UPC_E";
-    // According to Apple documentation, UPC_A is EAN13 with a leading 0.
-    if (format.type == AVMetadataObjectTypeEAN13Code && [format.stringValue characterAtIndex:0] == '0') return @"UPC_A";
-    if (format.type == AVMetadataObjectTypeEAN8Code)        return @"EAN_8";
-    if (format.type == AVMetadataObjectTypeEAN13Code)       return @"EAN_13";
-    if (format.type == AVMetadataObjectTypeCode128Code)     return @"CODE_128";
-    if (format.type == AVMetadataObjectTypeCode93Code)      return @"CODE_93";
-    if (format.type == AVMetadataObjectTypeCode39Code)      return @"CODE_39";
-    if (format.type == AVMetadataObjectTypeITF14Code)          return @"ITF";
-    if (format.type == AVMetadataObjectTypePDF417Code)      return @"PDF_417";
-    return @"???";
-}
 
 - (NSString *)barcodeFormatToString:(ZXBarcodeFormat)format {
   switch (format) {
@@ -734,91 +667,6 @@ parentViewController:(UIViewController*)parentViewController
   }
 }
 
-//--------------------------------------------------------------------------
-// convert capture's sample buffer (scanned picture) into the thing that
-// zxing needs.
-//--------------------------------------------------------------------------
-- (ZXLuminanceSource *) getLuminanceSourceFromSample:(CMSampleBufferRef)sampleBuffer imageBytes:(uint8_t**)ptr {
-    /*CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    CVPixelBufferLockBaseAddress(imageBuffer, 0);
-
-    size_t   bytesPerRow =            CVPixelBufferGetBytesPerRow(imageBuffer);
-    size_t   width       =            CVPixelBufferGetWidth(imageBuffer);
-    size_t   height      =            CVPixelBufferGetHeight(imageBuffer);
-    uint8_t* baseAddress = (uint8_t*) CVPixelBufferGetBaseAddress(imageBuffer);
-
-    // only going to get 90% of the min(width,height) of the captured image
-    size_t    greyWidth  = 9 * MIN(width, height) / 10;
-    uint8_t*  greyData   = (uint8_t*) malloc(greyWidth * greyWidth);
-
-    // remember this pointer so we can free it later
-    *ptr = greyData;
-
-    if (!greyData) {
-        CVPixelBufferUnlockBaseAddress(imageBuffer,0);
-        throw new ZXReaderException("out of memory");
-    }
-
-    size_t offsetX = (width  - greyWidth) / 2;
-    size_t offsetY = (height - greyWidth) / 2;
-
-    // pixel-by-pixel ...
-    for (size_t i=0; i<greyWidth; i++) {
-        for (size_t j=0; j<greyWidth; j++) {
-            // i,j are the coordinates from the sample buffer
-            // ni, nj are the coordinates in the LuminanceSource
-            // in this case, there's a rotation taking place
-            size_t ni = greyWidth-j;
-            size_t nj = i;
-
-            size_t baseOffset = (j+offsetY)*bytesPerRow + (i + offsetX)*4;
-
-            // convert from color to grayscale
-            // http://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
-            size_t value = 0.11 * baseAddress[baseOffset] +
-            0.59 * baseAddress[baseOffset + 1] +
-            0.30 * baseAddress[baseOffset + 2];
-
-            greyData[nj*greyWidth + ni] = value;
-        }
-    }
-
-    CVPixelBufferUnlockBaseAddress(imageBuffer,0);
-
-    ZXLuminanceSource* luminanceSource = [[ZXCGImageLuminanceSource alloc] initWithBuffer:imageBuffer left:0 top:0 width:(int)greyWidth height:(int)greyWidth]
-
-//    ZXLuminanceSource* luminanceSource (
-//                                          new GreyscaleLuminanceSource(greyData, (int)greyWidth, (int)greyWidth, 0, 0, (int)greyWidth, (int)greyWidth)
-//                                          );
-
-    return luminanceSource;*/
-    return 0;
-}
-
-//--------------------------------------------------------------------------
-// for debugging
-//--------------------------------------------------------------------------
-- (UIImage*) getImageFromLuminanceSource:(ZXLuminanceSource*)luminanceSource  {
-    /*unsigned char* bytes = luminanceSource->getMatrix();
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
-    CGContextRef context = CGBitmapContextCreate(
-                                                 bytes,
-                                                 luminanceSource->getWidth(), luminanceSource->getHeight(), 8, luminanceSource->getWidth(),
-                                                 colorSpace,
-                                                 kCGImageAlphaNone
-                                                 );
-
-    CGImageRef cgImage = CGBitmapContextCreateImage(context);
-    UIImage*   image   = [[UIImage alloc] initWithCGImage:cgImage];
-
-    CGContextRelease(context);
-    CGColorSpaceRelease(colorSpace);
-    CGImageRelease(cgImage);
-    free(bytes);
-
-    return image;*/
-    return 0;
-}
 
 //--------------------------------------------------------------------------
 // for debugging
