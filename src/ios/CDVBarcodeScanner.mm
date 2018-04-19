@@ -587,10 +587,6 @@ parentViewController:(UIViewController*)parentViewController
         }else{
         bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
         }
-
-        ZXLuminanceSource *source = [[[ZXCGImageLuminanceSource alloc] initWithCGImage:videoFrameImage] autorelease];
-        ZXBinaryBitmap *bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
-
         // clean up
         CGImageRelease(videoFrameImage);
 
