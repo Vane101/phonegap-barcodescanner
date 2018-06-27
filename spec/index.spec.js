@@ -5,7 +5,7 @@
  */
 
 var cordova = require('./helper/cordova'),
-    BarcodeScanner = require('../www/barcodescanner'),
+    BarcodeScanner = require('../www/custombarcodescanner'),
     execSpy,
     execWin,
     options;
@@ -14,14 +14,14 @@ var cordova = require('./helper/cordova'),
  * Specification.
  */
 
-describe('phonegap-plugin-barcodescanner', function () {
+describe('custom-plugin-barcodescanner', function () {
     beforeEach(function () {
         execWin = jasmine.createSpy();
         execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
     });
 
-    describe('BarcodeScanner', function () {
-      it("BarcodeScanner plugin should exist", function() {
+    describe('CustomBarcodeScanner', function () {
+      it("CustomBarcodeScanner plugin should exist", function() {
           expect(BarcodeScanner).toBeDefined();
           expect(typeof BarcodeScanner == 'object').toBe(true);
       });
@@ -52,7 +52,7 @@ describe('phonegap-plugin-barcodescanner', function () {
                     expect(execSpy).toHaveBeenCalledWith(
                         jasmine.any(Function),
                         jasmine.any(Function),
-                        'BarcodeScanner',
+                        'CustomBarcodeScanner',
                         'scan',
                         jasmine.any(Object)
                     );
@@ -66,7 +66,7 @@ describe('phonegap-plugin-barcodescanner', function () {
                     expect(execSpy).toHaveBeenCalledWith(
                         jasmine.any(Function),
                         jasmine.any(Function),
-                        'BarcodeScanner',
+                        'CustomBarcodeScanner',
                         'encode',
                         jasmine.any(Object)
                     );

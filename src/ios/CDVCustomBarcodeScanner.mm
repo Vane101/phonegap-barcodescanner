@@ -34,13 +34,13 @@
 #define USE_SHUTTER 0
 
 //------------------------------------------------------------------------------
-@class CDVbcsProcessor;
-@class CDVbcsViewController;
+@class CDVbcsProcessorCustom;
+@class CDVbcsViewControllerCustom;
 
 //------------------------------------------------------------------------------
 // plugin class
 //------------------------------------------------------------------------------
-@interface CDVBarcodeScanner : CDVPlugin {}
+@interface CDVCustomBarcodeScanner : CDVPlugin {}
 - (NSString*)isScanNotPossible;
 - (void)scan:(CDVInvokedUrlCommand*)command;
 - (void)encode:(CDVInvokedUrlCommand*)command;
@@ -52,18 +52,17 @@
 //------------------------------------------------------------------------------
 // class that does the grunt work
 //------------------------------------------------------------------------------
-@interface CDVbcsProcessor : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate> {}
-@property (nonatomic, retain) CDVBarcodeScanner*           plugin;
+@interface CDVbcsProcessorCustom : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate> {}
+@property (nonatomic, retain) CDVCustomBarcodeScanner*           plugin;
 @property (nonatomic, retain) NSString*                   callback;
 @property (nonatomic, retain) UIViewController*           parentViewController;
-@property (nonatomic, retain) CDVbcsViewController*        viewController;
+@property (nonatomic, retain) CDVbcsViewControllerCustom*        viewController;
 @property (nonatomic, retain) AVCaptureSession*           captureSession;
 @property (nonatomic, retain) AVCaptureVideoPreviewLayer* previewLayer;
 @property (nonatomic, retain) NSString*                   alternateXib;
 @property (nonatomic, retain) NSMutableArray*             results;
 @property (nonatomic, retain) NSString*                   formats;
 @property (nonatomic)         BOOL                        is1D;
-@property (nonatomic)         BOOL                        isSAMARLabel;
 @property (nonatomic)         BOOL                        is2D;
 @property (nonatomic)         BOOL                        capturing;
 @property (nonatomic)         BOOL                        isFrontCamera;
@@ -74,7 +73,7 @@
 @property (nonatomic)         BOOL                        isSuccessBeepEnabled;
 
 
-- (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
+- (id)initWithPlugin:(CDVCustomBarcodeScanner*)plugin callback:(NSString*)callback parentViewController:(UIViewController*)parentViewController alterateOverlayXib:(NSString *)alternateXib;
 - (void)scanBarcode;
 - (void)barcodeScanSucceeded:(NSString*)text format:(NSString*)format;
 - (void)barcodeScanFailed:(NSString*)message;
@@ -90,28 +89,28 @@
 //------------------------------------------------------------------------------
 // Qr encoder processor
 //------------------------------------------------------------------------------
-@interface CDVqrProcessor: NSObject
-@property (nonatomic, retain) CDVBarcodeScanner*          plugin;
+@interface CDVqrProcessorCustom: NSObject
+@property (nonatomic, retain) CDVCustomBarcodeScanner*          plugin;
 @property (nonatomic, retain) NSString*                   callback;
 @property (nonatomic, retain) NSString*                   stringToEncode;
 @property                     NSInteger                   size;
 
-- (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback stringToEncode:(NSString*)stringToEncode;
+- (id)initWithPlugin:(CDVCustomBarcodeScanner*)plugin callback:(NSString*)callback stringToEncode:(NSString*)stringToEncode;
 - (void)generateImage;
 @end
 
 //------------------------------------------------------------------------------
 // view controller for the ui
 //------------------------------------------------------------------------------
-@interface CDVbcsViewController : UIViewController <CDVBarcodeScannerOrientationDelegate> {}
-@property (nonatomic, retain) CDVbcsProcessor*  processor;
+@interface CDVbcsViewControllerCustom : UIViewController <CDVBarcodeScannerOrientationDelegate> {}
+@property (nonatomic, retain) CDVbcsProcessorCustom*  processor;
 @property (nonatomic, retain) NSString*        alternateXib;
 @property (nonatomic)         BOOL             shutterPressed;
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
 
-- (id)initWithProcessor:(CDVbcsProcessor*)processor alternateOverlay:(NSString *)alternateXib;
+- (id)initWithProcessor:(CDVbcsProcessorCustom*)processor alternateOverlay:(NSString *)alternateXib;
 - (void)startCapturing;
 - (UIView*)buildOverlayView;
 - (UIImage*)buildReticleImage;
@@ -123,7 +122,7 @@
 //------------------------------------------------------------------------------
 // plugin class
 //------------------------------------------------------------------------------
-@implementation CDVBarcodeScanner
+@implementation CDVCustomBarcodeScanner
 
 //--------------------------------------------------------------------------
 - (NSString*)isScanNotPossible {
@@ -148,7 +147,7 @@
 
 //--------------------------------------------------------------------------
 - (void)scan:(CDVInvokedUrlCommand*)command {
-    CDVbcsProcessor* processor;
+    CDVbcsProcessorCustom* processor;
     NSString*       callback;
     NSString*       capabilityError;
 
@@ -166,7 +165,6 @@
     BOOL showTorchButton = [options[@"showTorchButton"] boolValue];
     BOOL disableAnimations = [options[@"disableAnimations"] boolValue];
     BOOL disableSuccessBeep = [options[@"disableSuccessBeep"] boolValue];
-    BOOL samarLabel = [options[@"samarLabel"] boolValue];
 
     // We allow the user to define an alternate xib file for loading the overlay.
     NSString *overlayXib = options[@"overlayXib"];
@@ -181,7 +179,7 @@
         return;
     }
 
-    processor = [[[CDVbcsProcessor alloc]
+    processor = [[[CDVbcsProcessorCustom alloc]
                   initWithPlugin:self
                   callback:callback
                   parentViewController:self.viewController
@@ -193,14 +191,8 @@
         processor.isFrontCamera = true;
     }
 
-    //if (showFlipCameraButton) {
-    //processor.isShowFlipCameraButton = true;
-    //}
-
-    // we are going to repurpose the showFlipCameraButton flag to indicate that we are reading a SAMAR label
-    //instead of creating another flag in the ionic Native Barcode library.
-    if(showFlipCameraButton){
-        processor.isSAMARLabel = true;
+    if (showFlipCameraButton) {
+    processor.isShowFlipCameraButton = true;
     }
 
     if (showTorchButton) {
@@ -221,11 +213,11 @@
     if([command.arguments count] < 1)
         [self returnError:@"Too few arguments!" callback:command.callbackId];
 
-    CDVqrProcessor* processor;
+CDVqrProcessorCustom* processor;
     NSString*       callback;
     callback = command.callbackId;
 
-    processor = [[CDVqrProcessor alloc]
+    processor = [[CDVqrProcessorCustom alloc]
                  initWithPlugin:self
                  callback:callback
                  stringToEncode: command.arguments[0][@"data"]
@@ -282,7 +274,7 @@
 //------------------------------------------------------------------------------
 // class that does the grunt work
 //------------------------------------------------------------------------------
-@implementation CDVbcsProcessor
+@implementation CDVbcsProcessorCustom
 
 @synthesize plugin               = _plugin;
 @synthesize callback             = _callback;
@@ -296,10 +288,10 @@
 @synthesize capturing            = _capturing;
 @synthesize results              = _results;
 
-SystemSoundID _soundFileObject;
+SystemSoundID _soundFileObjectCustom;
 
 //--------------------------------------------------------------------------
-- (id)initWithPlugin:(CDVBarcodeScanner*)plugin
+- (id)initWithPlugin:(CDVCustomBarcodeScanner*)plugin
             callback:(NSString*)callback
 parentViewController:(UIViewController*)parentViewController
   alterateOverlayXib:(NSString *)alternateXib
@@ -317,8 +309,8 @@ parentViewController:(UIViewController*)parentViewController
     self.capturing = NO;
     self.results = [[NSMutableArray new] autorelease];
 
-    CFURLRef soundFileURLRef  = CFBundleCopyResourceURL(CFBundleGetMainBundle(), CFSTR("CDVBarcodeScanner.bundle/beep"), CFSTR ("caf"), NULL);
-    AudioServicesCreateSystemSoundID(soundFileURLRef, &_soundFileObject);
+    CFURLRef soundFileURLRef  = CFBundleCopyResourceURL(CFBundleGetMainBundle(), CFSTR("CDVCustomBarcodeScanner.bundle/beep"), CFSTR ("caf"), NULL);
+    AudioServicesCreateSystemSoundID(soundFileURLRef, &_soundFileObjectCustom);
 
     return self;
 }
@@ -336,8 +328,8 @@ parentViewController:(UIViewController*)parentViewController
 
     self.capturing = NO;
 
-    AudioServicesRemoveSystemSoundCompletion(_soundFileObject);
-    AudioServicesDisposeSystemSoundID(_soundFileObject);
+    AudioServicesRemoveSystemSoundCompletion(_soundFileObjectCustom);
+    AudioServicesDisposeSystemSoundID(_soundFileObjectCustom);
 
     [super dealloc];
 }
@@ -353,7 +345,7 @@ parentViewController:(UIViewController*)parentViewController
         return;
     }
 
-    self.viewController = [[[CDVbcsViewController alloc] initWithProcessor: self alternateOverlay:self.alternateXib] autorelease];
+    self.viewController = [[[CDVbcsViewControllerCustom alloc] initWithProcessor: self alternateOverlay:self.alternateXib] autorelease];
     // here we set the orientation delegate to the MainViewController of the app (orientation controlled in the Project Settings)
     self.viewController.orientationDelegate = self.plugin.viewController;
 
@@ -418,7 +410,7 @@ parentViewController:(UIViewController*)parentViewController
             [self.plugin returnSuccess:text format:format cancelled:FALSE flipped:FALSE callback:self.callback];
         }];
         if (self.isSuccessBeepEnabled) {
-            AudioServicesPlaySystemSound(_soundFileObject);
+            AudioServicesPlaySystemSound(_soundFileObjectCustom);
         }
     });
 }
@@ -578,15 +570,12 @@ parentViewController:(UIViewController*)parentViewController
     try {
         CVImageBufferRef videoFrame = CMSampleBufferGetImageBuffer(sampleBuffer);
         CGImageRef videoFrameImage = [ZXCGImageLuminanceSource createImageFromBuffer:videoFrame];
-        ZXBinaryBitmap *bitmap;
+
         ZXLuminanceSource *source = [[[ZXCGImageLuminanceSource alloc] initWithCGImage:videoFrameImage] autorelease];
 
-        if(self.isSAMARLabel){
         ZXLuminanceSource *sourceInverted= (ZXCGImageLuminanceSource*)source.invert;
-        bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:sourceInverted]];
-        }else{
-        bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:source]];
-        }
+        ZXBinaryBitmap *bitmap = [ZXBinaryBitmap binaryBitmapWithBinarizer:[ZXHybridBinarizer binarizerWithSource:sourceInverted]];
+
         // clean up
         CGImageRelease(videoFrameImage);
 
@@ -742,13 +731,13 @@ parentViewController:(UIViewController*)parentViewController
 //------------------------------------------------------------------------------
 // qr encoder processor
 //------------------------------------------------------------------------------
-@implementation CDVqrProcessor
+@implementation CDVqrProcessorCustom
 @synthesize plugin               = _plugin;
 @synthesize callback             = _callback;
 @synthesize stringToEncode       = _stringToEncode;
 @synthesize size                 = _size;
 
-- (id)initWithPlugin:(CDVBarcodeScanner*)plugin callback:(NSString*)callback stringToEncode:(NSString*)stringToEncode{
+- (id)initWithPlugin:(CDVCustomBarcodeScanner*)plugin callback:(NSString*)callback stringToEncode:(NSString*)stringToEncode{
     self = [super init];
     if (!self) return self;
 
@@ -821,14 +810,14 @@ parentViewController:(UIViewController*)parentViewController
 //------------------------------------------------------------------------------
 // view controller for the ui
 //------------------------------------------------------------------------------
-@implementation CDVbcsViewController
+@implementation CDVbcsViewControllerCustom
 @synthesize processor      = _processor;
 @synthesize shutterPressed = _shutterPressed;
 @synthesize alternateXib   = _alternateXib;
 @synthesize overlayView    = _overlayView;
 
 //--------------------------------------------------------------------------
-- (id)initWithProcessor:(CDVbcsProcessor*)processor alternateOverlay:(NSString *)alternateXib {
+- (id)initWithProcessor:(CDVbcsProcessorCustom*)processor alternateOverlay:(NSString *)alternateXib {
     self = [super init];
     if (!self) return self;
 
@@ -986,7 +975,7 @@ parentViewController:(UIViewController*)parentViewController
     if (_processor.isShowTorchButton && !_processor.isFrontCamera) {
         AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
         if ([device hasTorch] && [device hasFlash]) {
-            NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVBarcodeScanner" withExtension:@"bundle"];
+            NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:@"CDVCustomBarcodeScanner" withExtension:@"bundle"];
             NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
             NSString *imagePath = [bundle pathForResource:@"torch" ofType:@"png"];
             UIImage *image = [UIImage imageWithContentsOfFile:imagePath];

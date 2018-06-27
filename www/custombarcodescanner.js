@@ -14,9 +14,9 @@
         /**
          * Constructor.
          *
-         * @returns {BarcodeScanner}
+         * @returns {CustomBarcodeScanner}
          */
-        function BarcodeScanner() {
+        function CustomBarcodeScanner() {
 
             /**
              * Encoding constants.
@@ -72,7 +72,7 @@
  * @param {Function} errorCallback
  * @param config
  */
-BarcodeScanner.prototype.scan = function (successCallback, errorCallback, config) {
+CustomBarcodeScanner.prototype.scan = function (successCallback, errorCallback, config) {
 
             if (config instanceof Array) {
                 // do nothing
@@ -90,12 +90,12 @@ BarcodeScanner.prototype.scan = function (successCallback, errorCallback, config
             }
 
             if (typeof errorCallback != "function") {
-                console.log("BarcodeScanner.scan failure: failure parameter not a function");
+                console.log("CustomBarcodeScanner.scan failure: failure parameter not a function");
                 return;
             }
 
             if (typeof successCallback != "function") {
-                console.log("BarcodeScanner.scan failure: success callback parameter must be a function");
+                console.log("CustomBarcodeScanner.scan failure: success callback parameter must be a function");
                 return;
             }
 
@@ -115,33 +115,33 @@ BarcodeScanner.prototype.scan = function (successCallback, errorCallback, config
                     scanInProgress = false;
                     errorCallback(error);
                 },
-                'BarcodeScanner',
+                'CustomBarcodeScanner',
                 'scan',
                 config
             );
         };
 
         //-------------------------------------------------------------------
-        BarcodeScanner.prototype.encode = function (type, data, successCallback, errorCallback, options) {
+        CustomBarcodeScanner.prototype.encode = function (type, data, successCallback, errorCallback, options) {
             if (errorCallback == null) {
                 errorCallback = function () {
                 };
             }
 
             if (typeof errorCallback != "function") {
-                console.log("BarcodeScanner.encode failure: failure parameter not a function");
+                console.log("CustomBarcodeScanner.encode failure: failure parameter not a function");
                 return;
             }
 
             if (typeof successCallback != "function") {
-                console.log("BarcodeScanner.encode failure: success callback parameter must be a function");
+                console.log("CustomBarcodeScanner.encode failure: success callback parameter must be a function");
                 return;
             }
 
-            exec(successCallback, errorCallback, 'BarcodeScanner', 'encode', [
+            exec(successCallback, errorCallback, 'CustomBarcodeScanner', 'encode', [
                 {"type": type, "data": data, "options": options}
             ]);
         };
 
-        var barcodeScanner = new BarcodeScanner();
+        var barcodeScanner = new CustomBarcodeScanner();
         module.exports = barcodeScanner;
